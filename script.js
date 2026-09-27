@@ -1,14 +1,64 @@
-// BANCO DE DADOS LOCAL
+// Querida Nick, esse é o ínicio das minhas alterações, basicamente eu criei o banco de dados no firebase pra vc, estou usando um meu pra testar, mas depois a gente cria o seu junto ok?
+//Notei que o gemini não tinha errado, ele só tinha programado o save no cache do navegador, aí eu adicionei mais uns métodos pra enviar diretamente para um banco de dados na nuvem que eu tenho
+//Basicamente sempre que a senhora salvar um novo quadrinho, ele vai fazer o upload no banco de dados e aí deve funcionar em qualquer plataforma
+const CLOUD_JSON_URL = "https://hq-s-library-default-rtdb.firebaseio.com/dados.json";
+
 let colecao = JSON.parse(localStorage.getItem('minhaColecaoQuadrinhos')) || [];
 let rankingColecao = JSON.parse(localStorage.getItem('meuRankingQuadrinhos')) || [];
 
+async function sincronizarComNuvem() {
+  try {
+    await fetch(CLOUD_JSON_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        colecao: colecao,
+        rankingColecao: rankingColecao,
+        atualizadoEm: new Date().toISOString()
+      })
+    });
+    console.log("☁️ Dados salvos na nuvem com sucesso!");
+  } catch (erro) {
+    console.error("Erro ao salvar na nuvem:", erro);
+  }
+}
+
+async function carregarDaNuvem() {
+  try {
+    const resposta = await fetch(CLOUD_JSON_URL);
+    const dados = await resposta.json();
+
+    // Se já existir algo salvo na nuvem (não for null), carrega para o site
+    if (dados) {
+      colecao = dados.colecao || [];
+      rankingColecao = dados.rankingColecao || [];
+
+      localStorage.setItem('minhaColecaoQuadrinhos', JSON.stringify(colecao));
+      localStorage.setItem('meuRankingQuadrinhos', JSON.stringify(rankingColecao));
+    } else if (colecao.length > 0 || rankingColecao.length > 0) {
+      // Se a nuvem estiver "null", mas o seu PC já tiver HQs salvas, envia para a nuvem automaticamente!
+      await sincronizarComNuvem();
+    }
+
+    atualizarTodosOsFiltros();
+    exibirQuadrinhos();
+  } catch (erro) {
+    console.error("Erro ao carregar da nuvem:", erro);
+    atualizarTodosOsFiltros();
+    exibirQuadrinhos();
+  }
+}
+
 function salvarNoLocalStorage() {
   localStorage.setItem('minhaColecaoQuadrinhos', JSON.stringify(colecao));
+  sincronizarComNuvem();
 }
 
 function salvarRankingLocalStorage() {
   localStorage.setItem('meuRankingQuadrinhos', JSON.stringify(rankingColecao));
+  sincronizarComNuvem();
 }
+//Aqui eu parei com as minhas mudanças, vou mudar só mais um pouquinho nas ultimas linhas
 
 // NORMALIZAÇÃO DE TEXTO ULTRA FLEXÍVEL
 function normalizarTexto(texto) {
@@ -635,6 +685,5 @@ function toggleSidebar() {
 // Mapeamento global
 window.toggleSidebar = toggleSidebar;
 
-// CARREGAMENTO INICIAL
-atualizarTodosOsFiltros();
-exibirQuadrinhos();
+// CARREGAMENTO INICIAL -- Mudanças pra carregar via servidor
+carregarDaNuvem();
