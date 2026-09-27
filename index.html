@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comic Vault // Manager</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- BOTÃO FLUTUANTE PARA ABRIR O MENU -->
+  <button class="menu-toggle-btn" onclick="toggleSidebar()">
+    <span>☰</span> MENU
+  </button>
+
+  <!-- OVERLAY PARA FECHAR AO CLICAR FORA -->
+  <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+  <div class="app-container">
+    <!-- SIDEBAR RETRÁTIL (INVISÍVEL POR PADRÃO) -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-badge">SYSTEM // V2.6</div>
+        <h1>COMIC VAULT</h1>
+        <button class="close-sidebar-btn" onclick="toggleSidebar()">✕</button>
+      </div>
+
+      <nav class="tab-nav">
+        <button id="btn-tab-cadastrar" class="tab-btn active" onclick="trocarAba('cadastrar'); toggleSidebar()">CADASTRAR</button>
+        <button id="btn-tab-colecao" class="tab-btn" onclick="trocarAba('colecao'); toggleSidebar()">COLEÇÃO</button>
+        <button id="btn-tab-cronologia" class="tab-btn" onclick="trocarAba('cronologia'); toggleSidebar()">CRONOLOGIA</button>
+        <button id="btn-tab-subtitulos" class="tab-btn" onclick="trocarAba('subtitulos'); toggleSidebar()">CONTEÚDO</button>
+        <button id="btn-tab-ranking" class="tab-btn" onclick="trocarAba('ranking'); toggleSidebar()">RANKING</button>
+        <button id="btn-tab-financeiro" class="tab-btn" onclick="trocarAba('financeiro'); toggleSidebar()">FINANCEIRO</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        VAULT OS // 2026
+      </div>
+    </aside>
+
+    <!-- ÁREA PRINCIPAL -->
+    <main class="main-content">
+      <!-- Mantenha todas as divs das abas e modais exatamente como estão -->
+
+      <!-- ABA 1: CADASTRAR HQ -->
+      <div id="tab-cadastrar" class="tab-content active">
+        <section class="tech-panel">
+          <div class="panel-header">REGISTRO DE NOVA HQ</div>
+          <form id="comic-form">
+            <input type="text" id="title" placeholder="Título do Quadrinho">
+            <input type="text" id="cover" placeholder="URL da Imagem da Capa">
+            <input type="text" id="character" placeholder="Personagem Principal">
+            
+            <input type="text" id="writer" placeholder="Escritor(es)">
+            <input type="text" id="original-publisher" placeholder="Editora de Publicação (ex: Panini)">
+
+            <div class="form-group">
+              <select id="publisher">
+                <option value="DC">DC Comics</option>
+                <option value="Marvel">Marvel</option>
+                <option value="Outros">Outros</option>
+              </select>
+
+              <select id="ownership">
+                <option value="Já Possuo - Físico">Físico</option>
+                <option value="Já Possuo - Digital">Digital</option>
+                <option value="Não Possuo">Não Possuo</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <select id="read-status">
+                <option value="Já Lido">Lido</option>
+                <option value="Lendo">Lendo</option>
+                <option value="Quero Ler">Quero Ler</option>
+              </select>
+
+              <input type="number" id="year" placeholder="Ano Lançamento" min="1930" max="2030">
+              <input type="number" id="read-year" placeholder="Ano de Leitura" min="1950" max="2030">
+              <input type="number" id="rating" placeholder="Rating (0.5 a 5)" min="0.5" max="5" step="0.5">
+              <input type="number" id="reading-order" placeholder="Index Cronológico" min="1">
+            </div>
+
+            <div class="form-group">
+              <input type="number" id="total-pages" placeholder="Total Páginas" min="1">
+              <input type="number" id="pages-read" placeholder="Páginas Lidas" min="0">
+            </div>
+
+            <div class="form-group">
+              <input type="number" id="cover-price" placeholder="Preço Capa (R$)" step="0.01" min="0">
+              <input type="number" id="paid-price" placeholder="Preço Pago (R$)" step="0.01" min="0">
+            </div>
+
+            <textarea id="included-content" placeholder="Histórias / Subtítulos Inclusos (separados por vírgula)" rows="2"></textarea>
+            <textarea id="review" placeholder="Notas do Editor / Resenha..." rows="3"></textarea>
+
+            <button type="submit" class="btn-tech-primary">REGISTRAR HQ</button>
+          </form>
+        </section>
+      </div>
+
+      <!-- ABA 2: MINHA COLEÇÃO -->
+      <div id="tab-colecao" class="tab-content">
+        <section class="stats-grid">
+          <div class="stat-box"><span id="stat-total">0</span><small>TOTAL HQS</small></div>
+          <div class="stat-box"><span id="stat-reading">0</span><small>LENDO</small></div>
+          <div class="stat-box"><span id="stat-read">0</span><small>LIDOS</small></div>
+          <div class="stat-box"><span id="stat-want">0</span><small>WISHLIST</small></div>
+          <div class="stat-box"><span id="stat-pages-total">0</span><small>PÁGS LIDAS</small></div>
+          <div class="stat-box"><span id="stat-percent-global">0%</span><small>PROGRESSO</small></div>
+        </section>
+
+        <section class="tech-panel search-panel">
+          <input type="text" id="search-input" placeholder="BUSCAR POR TÍTULO, AUTOR OU CONTEÚDO...">
+        </section>
+
+        <section class="vault-container">
+          <div id="comic-list" class="comic-grid"></div>
+        </section>
+      </div>
+
+      <!-- ABA 3: CRONOLOGIA -->
+      <div id="tab-cronologia" class="tab-content">
+        <section class="tech-panel">
+          <div class="panel-header">ORDEM CRONOLÓGICA DE LEITURA</div>
+          <select id="character-filter" onchange="exibirCronologia()">
+            <option value="">Selecione o Personagem...</option>
+          </select>
+        </section>
+
+        <section class="vault-container">
+          <div id="cronologia-list" class="chrono-cover-grid">
+            <div class="empty-state" style="grid-column: 1/-1;">Aguardando seleção de personagem...</div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ABA 4: CONTEÚDO POR PERSONAGEM (A-Z) -->
+      <div id="tab-subtitulos" class="tab-content">
+        <section class="tech-panel">
+          <div class="panel-header">ÍNDICE DE CONTEÚDO POR PERSONAGEM (A-Z)</div>
+          <select id="subtitulos-character-filter" onchange="exibirSubtitulos()">
+            <option value="">Selecione o Personagem...</option>
+          </select>
+        </section>
+
+        <section class="tech-panel">
+          <div id="subtitulos-list" class="tech-list">
+            <div class="empty-state">Aguardando seleção de personagem...</div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ABA 5: RANKING -->
+      <div id="tab-ranking" class="tab-content">
+        <section class="tech-panel">
+          <div class="panel-header">ADICIONAR AO RANKING</div>
+          <form id="ranking-form">
+            <input type="text" id="ranking-title" placeholder="Título da História / Arco">
+            
+            <div class="form-group">
+              <input type="text" id="ranking-character" placeholder="Personagem">
+              <input type="number" id="ranking-position" placeholder="Posição (#1)" min="1">
+              <input type="number" id="ranking-rating" placeholder="Score (0.5 a 5)" min="0.5" max="5" step="0.5">
+            </div>
+
+            <textarea id="ranking-comment" placeholder="Análise crítica..." rows="2"></textarea>
+            <button type="submit" class="btn-tech-primary">SALVAR RANKING</button>
+          </form>
+        </section>
+
+        <section class="tech-panel">
+          <select id="ranking-character-filter" onchange="exibirRanking()">
+            <option value="">Filtrar Ranking por Personagem...</option>
+          </select>
+          <div id="ranking-list" class="tech-list" style="margin-top: 15px;"></div>
+        </section>
+      </div>
+
+      <!-- ABA 6: FINANCEIRO HUD -->
+      <div id="tab-financeiro" class="tab-content">
+        <section class="tech-panel">
+          <div class="panel-header">MÉTRICAS FINANCEIRAS</div>
+          <select id="finance-comic-filter" onchange="exibirDetalhamentoFinanceiro()">
+            <option value="">Selecione a HQ para análise de custo...</option>
+          </select>
+        </section>
+
+        <section id="finance-display-container" class="hud-finance-grid" style="display: none;">
+          <div class="hud-box hud-main">
+            <div id="finance-thumb-box"></div>
+            <div class="hud-info">
+              <div class="hud-tag">HQ TARGET</div>
+              <h3 id="finance-hq-title">TITLE</h3>
+              <p id="finance-hq-meta">META DATA</p>
+            </div>
+          </div>
+
+          <div class="hud-box">
+            <div class="hud-label">INVESTIMENTO PAGO</div>
+            <div id="finance-val-pago" class="hud-value val-green">R$ 0,00</div>
+          </div>
+
+          <div class="hud-box">
+            <div class="hud-label">VALOR DE CAPA</div>
+            <div id="finance-val-capa" class="hud-value val-cyan">R$ 0,00</div>
+          </div>
+
+          <div class="hud-box">
+            <div class="hud-label">ECONOMIA OBTIDA</div>
+            <div id="finance-val-econ" class="hud-value val-amber">R$ 0,00</div>
+          </div>
+        </section>
+
+        <div id="finance-empty-msg" class="empty-state">
+          Selecione um item no seletor acima para carregar a telemetria financeira.
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- MODAL TECH DETALHES -->
+  <div id="detail-modal" class="tech-modal">
+    <div class="modal-card">
+      <button class="close-btn" onclick="fecharModalDetalhes()">ESC [✕]</button>
+      <div id="detail-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- MODAL TECH EDIÇÃO -->
+  <div id="edit-modal" class="tech-modal">
+    <div class="modal-card">
+      <div class="panel-header">EDITAR REGISTRO</div>
+      <form id="edit-form">
+        <input type="hidden" id="edit-id">
+        <input type="text" id="edit-title" placeholder="Título">
+        <input type="text" id="edit-cover" placeholder="URL Capa">
+        <input type="text" id="edit-character" placeholder="Personagem">
+        
+        <input type="text" id="edit-writer" placeholder="Escritor(es)">
+        <input type="text" id="edit-original-publisher" placeholder="Editora Publicação">
+
+        <div class="form-group">
+          <select id="edit-publisher">
+            <option value="DC">DC Comics</option>
+            <option value="Marvel">Marvel</option>
+            <option value="Outros">Outros</option>
+          </select>
+
+          <select id="edit-ownership">
+            <option value="Já Possuo - Físico">Físico</option>
+            <option value="Já Possuo - Digital">Digital</option>
+            <option value="Não Possuo">Não Possuo</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <select id="edit-read-status">
+            <option value="Já Lido">Lido</option>
+            <option value="Lendo">Lendo</option>
+            <option value="Quero Ler">Quero Ler</option>
+          </select>
+
+          <input type="number" id="edit-year" placeholder="Ano">
+          <input type="number" id="edit-read-year" placeholder="Ano Lido">
+          <input type="number" id="edit-rating" placeholder="Rating" step="0.5">
+          <input type="number" id="edit-reading-order" placeholder="Index Cronológico">
+        </div>
+
+        <div class="form-group">
+          <input type="number" id="edit-total-pages" placeholder="Total Páginas">
+          <input type="number" id="edit-pages-read" placeholder="Páginas Lidas">
+        </div>
+
+        <div class="form-group">
+          <input type="number" id="edit-cover-price" placeholder="Preço Capa" step="0.01">
+          <input type="number" id="edit-paid-price" placeholder="Preço Pago" step="0.01">
+        </div>
+
+        <textarea id="edit-included-content" placeholder="Conteúdo Inclusos" rows="2"></textarea>
+        <textarea id="edit-review" placeholder="Resenha..." rows="3"></textarea>
+
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+          <button type="submit" class="btn-tech action-btn-edit" style="flex: 1;">ATUALIZAR</button>
+          <button type="button" class="btn-tech action-btn-delete" onclick="fecharModalEdicao()" style="flex: 1;">CANCELAR</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
