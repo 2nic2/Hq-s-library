@@ -1,64 +1,60 @@
 // Querida Nick, esse é o ínicio das minhas alterações, basicamente eu criei o banco de dados no firebase pra vc, estou usando um meu pra testar, mas depois a gente cria o seu junto ok?
 //Notei que o gemini não tinha errado, ele só tinha programado o save no cache do navegador, aí eu adicionei mais uns métodos pra enviar diretamente para um banco de dados na nuvem que eu tenho
 //Basicamente sempre que a senhora salvar um novo quadrinho, ele vai fazer o upload no banco de dados e aí deve funcionar em qualquer plataforma
-const CLOUD_JSON_URL = "https://hq-s-library-default-rtdb.firebaseio.com/dados.json";
+// CONFIGURAÇÃO DO SEU PROJETO FIREBASE (hq-s-library-b1b4a)
+const firebaseConfig = {
+  apiKey: "AIzaSyBv2HVoKH8zGMZRm8AB_xyx2mNfIPC_dao",
+  authDomain: "hq-s-library-b1b4a.firebaseapp.com",
+  projectId: "hq-s-library-b1b4a",
+  storageBucket: "hq-s-library-b1b4a.firebasestorage.app",
+  messagingSenderId: "934974664094",
+  appId: "1:934974664094:web:cfa6937c4bf6e80f293a8f"
+};
 
-let colecao = JSON.parse(localStorage.getItem('minhaColecaoQuadrinhos')) || [];
-let rankingColecao = JSON.parse(localStorage.getItem('meuRankingQuadrinhos')) || [];
+// Inicializa o Firebase e a base de dados Firestore
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-async function sincronizarComNuvem() {
-  try {
-    await fetch(CLOUD_JSON_URL, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        colecao: colecao,
-        rankingColecao: rankingColecao,
-        atualizadoEm: new Date().toISOString()
-      })
-    });
-    console.log("☁️ Dados salvos na nuvem com sucesso!");
-  } catch (erro) {
-    console.error("Erro ao salvar na nuvem:", erro);
+// Habilita persistência offline automática no celular e PC
+db.enablePersistence().catch(err => {
+  console.log("Aviso de persistência offline:", err.code);
+});
+
+// BANCO DE DADOS EM MEMÓRIA
+let colecao = [];
+let rankingColecao = [];
+
+// ESCUTA A COLEÇÃO DE HQS EM TEMPO REAL NO FIREBASE
+db.collection("quadrinhos").onSnapshot(snapshot => {
+  colecao = snapshot.docs.map(doc => ({
+    firestoreDocId: doc.id,
+    ...doc.data()
+  }));
+  atualizarTodosOsFiltros();
+  exibirQuadrinhos();
+  
+  // Atualiza a aba ativa no momento se for necessário
+  const abaAtiva = document.querySelector('.tab-content.active');
+  if (abaAtiva) {
+    if (abaAtiva.id === 'tab-cronologia') exibirCronologia();
+    else if (abaAtiva.id === 'tab-subtitulos') exibirSubtitulos();
+    else if (abaAtiva.id === 'tab-financeiro') exibirDetalhamentoFinanceiro();
   }
-}
+}, err => {
+  console.error("Erro ao sincronizar HQs:", err);
+});
 
-async function carregarDaNuvem() {
-  try {
-    const resposta = await fetch(CLOUD_JSON_URL);
-    const dados = await resposta.json();
-
-    // Se já existir algo salvo na nuvem (não for null), carrega para o site
-    if (dados) {
-      colecao = dados.colecao || [];
-      rankingColecao = dados.rankingColecao || [];
-
-      localStorage.setItem('minhaColecaoQuadrinhos', JSON.stringify(colecao));
-      localStorage.setItem('meuRankingQuadrinhos', JSON.stringify(rankingColecao));
-    } else if (colecao.length > 0 || rankingColecao.length > 0) {
-      // Se a nuvem estiver "null", mas o seu PC já tiver HQs salvas, envia para a nuvem automaticamente!
-      await sincronizarComNuvem();
-    }
-
-    atualizarTodosOsFiltros();
-    exibirQuadrinhos();
-  } catch (erro) {
-    console.error("Erro ao carregar da nuvem:", erro);
-    atualizarTodosOsFiltros();
-    exibirQuadrinhos();
-  }
-}
-
-function salvarNoLocalStorage() {
-  localStorage.setItem('minhaColecaoQuadrinhos', JSON.stringify(colecao));
-  sincronizarComNuvem();
-}
-
-function salvarRankingLocalStorage() {
-  localStorage.setItem('meuRankingQuadrinhos', JSON.stringify(rankingColecao));
-  sincronizarComNuvem();
-}
-//Aqui eu parei com as minhas mudanças, vou mudar só mais um pouquinho nas ultimas linhas
+// ESCUTA A COLEÇÃO DE RANKING EM TEMPO REAL NO FIREBASE
+db.collection("ranking").onSnapshot(snapshot => {
+  rankingColecao = snapshot.docs.map(doc => ({
+    firestoreDocId: doc.id,
+    ...doc.data()
+  }));
+  atualizarFiltroPersonagensRanking();
+  exibirRanking();
+}, err => {
+  console.error("Erro ao sincronizar Ranking:", err);
+});
 
 // NORMALIZAÇÃO DE TEXTO ULTRA FLEXÍVEL
 function normalizarTexto(texto) {
@@ -385,22 +381,24 @@ function atribuirNotaSubtitulo(hqId, nomeHistoria) {
   const hq = colecao.find(c => Number(c.id) === Number(hqId));
   if (!hq) return;
 
-  if (!hq.subtitulosDetalhes) hq.subtitulosDetalhes = {};
-  const notaAtual = hq.subtitulosDetalhes[nomeHistoria] ? hq.subtitulosDetalhes[nomeHistoria].nota : '';
+  const subtitulosDetalhes = hq.subtitulosDetalhes ? { ...hq.subtitulosDetalhes } : {};
+  const notaAtual = subtitulosDetalhes[nomeHistoria] ? subtitulosDetalhes[nomeHistoria].nota : '';
 
   const res = prompt(`Atribuir nota (0.5 a 5) para "${nomeHistoria}":`, notaAtual);
   if (res !== null) {
     const num = parseFloat(res.replace(',', '.'));
     if (!isNaN(num) && num >= 0 && num <= 5) {
-      if (!hq.subtitulosDetalhes[nomeHistoria]) hq.subtitulosDetalhes[nomeHistoria] = {};
-      hq.subtitulosDetalhes[nomeHistoria].nota = num;
-      salvarNoLocalStorage();
-      exibirSubtitulos();
+      if (!subtitulosDetalhes[nomeHistoria]) subtitulosDetalhes[nomeHistoria] = {};
+      subtitulosDetalhes[nomeHistoria].nota = num;
     } else if (res.trim() === '') {
-      delete hq.subtitulosDetalhes[nomeHistoria];
-      salvarNoLocalStorage();
-      exibirSubtitulos();
+      delete subtitulosDetalhes[nomeHistoria];
+    } else {
+      return;
     }
+
+    const docId = hq.firestoreDocId || String(hq.id);
+    db.collection("quadrinhos").doc(docId).update({ subtitulosDetalhes })
+      .catch(err => console.error("Erro ao salvar nota da história no Firebase:", err));
   }
 }
 
@@ -460,12 +458,13 @@ function exibirDetalhamentoFinanceiro() {
   document.getElementById('finance-val-econ').innerText = `R$ ${pEcon.toFixed(2).replace('.', ',')}`;
 }
 
-// FORMULÁRIO DE CADASTRO
+// FORMULÁRIO DE CADASTRO (ENVIA DIRETO PARA O FIREBASE)
 document.getElementById('comic-form').addEventListener('submit', function(e) {
   e.preventDefault();
 
+  const idUnico = Date.now();
   const novo = {
-    id: Date.now(),
+    id: idUnico,
     titulo: document.getElementById('title').value.trim() || 'Sem Título',
     capa: document.getElementById('cover').value.trim(),
     personagem: document.getElementById('character').value.trim() || 'Sem Personagem',
@@ -487,12 +486,12 @@ document.getElementById('comic-form').addEventListener('submit', function(e) {
     resenha: document.getElementById('review').value.trim()
   };
 
-  colecao.push(novo);
-  salvarNoLocalStorage();
-  this.reset();
-  
-  atualizarTodosOsFiltros();
-  trocarAba('colecao');
+  db.collection("quadrinhos").doc(String(idUnico)).set(novo)
+    .then(() => {
+      this.reset();
+      trocarAba('colecao');
+    })
+    .catch(err => console.error("Erro ao salvar HQ no Firebase:", err));
 });
 
 // MODAL DE EDIÇÃO
@@ -533,41 +532,46 @@ document.getElementById('edit-form').addEventListener('submit', function(e) {
   const q = colecao.find(item => Number(item.id) === id);
   if (!q) return;
 
-  q.titulo = document.getElementById('edit-title').value.trim();
-  q.capa = document.getElementById('edit-cover').value.trim();
-  q.personagem = document.getElementById('edit-character').value.trim();
-  q.escritor = document.getElementById('edit-writer').value.trim();
-  q.editoraPublicacao = document.getElementById('edit-original-publisher').value.trim();
-  q.editora = document.getElementById('edit-publisher').value;
-  q.posse = document.getElementById('edit-ownership').value;
-  q.statusLeitura = document.getElementById('edit-read-status').value;
-  q.ano = document.getElementById('edit-year').value || 'N/I';
-  q.anoLido = document.getElementById('edit-read-year').value || 'N/I';
-  q.nota = document.getElementById('edit-rating').value ? parseFloat(document.getElementById('edit-rating').value) : 0;
-  q.ordemLeitura = document.getElementById('edit-reading-order').value ? parseInt(document.getElementById('edit-reading-order').value) : null;
-  q.totalPaginas = document.getElementById('edit-total-pages').value ? parseInt(document.getElementById('edit-total-pages').value) : 0;
-  q.paginasLidas = document.getElementById('edit-pages-read').value ? parseInt(document.getElementById('edit-pages-read').value) : 0;
-  q.precoCapa = document.getElementById('edit-cover-price').value ? parseFloat(document.getElementById('edit-cover-price').value) : 0;
-  q.precoPago = document.getElementById('edit-paid-price').value ? parseFloat(document.getElementById('edit-paid-price').value) : 0;
-  q.historiasInclusas = document.getElementById('edit-included-content').value.trim();
-  q.resenha = document.getElementById('edit-review').value.trim();
+  const dadosAtualizados = {
+    titulo: document.getElementById('edit-title').value.trim(),
+    capa: document.getElementById('edit-cover').value.trim(),
+    personagem: document.getElementById('edit-character').value.trim(),
+    escritor: document.getElementById('edit-writer').value.trim(),
+    editoraPublicacao: document.getElementById('edit-original-publisher').value.trim(),
+    editora: document.getElementById('edit-publisher').value,
+    posse: document.getElementById('edit-ownership').value,
+    statusLeitura: document.getElementById('edit-read-status').value,
+    ano: document.getElementById('edit-year').value || 'N/I',
+    anoLido: document.getElementById('edit-read-year').value || 'N/I',
+    nota: document.getElementById('edit-rating').value ? parseFloat(document.getElementById('edit-rating').value) : 0,
+    ordemLeitura: document.getElementById('edit-reading-order').value ? parseInt(document.getElementById('edit-reading-order').value) : null,
+    totalPaginas: document.getElementById('edit-total-pages').value ? parseInt(document.getElementById('edit-total-pages').value) : 0,
+    paginasLidas: document.getElementById('edit-pages-read').value ? parseInt(document.getElementById('edit-pages-read').value) : 0,
+    precoCapa: document.getElementById('edit-cover-price').value ? parseFloat(document.getElementById('edit-cover-price').value) : 0,
+    precoPago: document.getElementById('edit-paid-price').value ? parseFloat(document.getElementById('edit-paid-price').value) : 0,
+    historiasInclusas: document.getElementById('edit-included-content').value.trim(),
+    resenha: document.getElementById('edit-review').value.trim()
+  };
 
-  salvarNoLocalStorage();
-  atualizarTodosOsFiltros();
-  exibirQuadrinhos();
-  fecharModalEdicao();
+  const docId = q.firestoreDocId || String(q.id);
+  db.collection("quadrinhos").doc(docId).update(dadosAtualizados)
+    .then(() => fecharModalEdicao())
+    .catch(err => console.error("Erro ao atualizar no Firebase:", err));
 });
 
-// APAGAR E ATUALIZAR
+// APAGAR REGISTRO NO FIREBASE
 function apagarQuadrinho(id) {
   if (confirm('Confirmar exclusão deste registro?')) {
-    colecao = colecao.filter(item => Number(item.id) !== Number(id));
-    salvarNoLocalStorage();
-    atualizarTodosOsFiltros();
-    exibirQuadrinhos();
+    const q = colecao.find(item => Number(item.id) === Number(id));
+    if (!q) return;
+
+    const docId = q.firestoreDocId || String(q.id);
+    db.collection("quadrinhos").doc(docId).delete()
+      .catch(err => console.error("Erro ao excluir do Firebase:", err));
   }
 }
 
+// ATUALIZAR PÁGINAS LIDAS NO FIREBASE
 function atualizarPaginasLidas(id) {
   const q = colecao.find(item => Number(item.id) === Number(id));
   if (!q) return;
@@ -576,29 +580,29 @@ function atualizarPaginasLidas(id) {
   if (res !== null && res.trim() !== '') {
     const val = parseInt(res.trim());
     if (!isNaN(val)) {
-      q.paginasLidas = val;
-      salvarNoLocalStorage();
-      exibirQuadrinhos();
+      const docId = q.firestoreDocId || String(q.id);
+      db.collection("quadrinhos").doc(docId).update({ paginasLidas: val })
+        .catch(err => console.error("Erro ao atualizar páginas lidas:", err));
     }
   }
 }
 
-// RANKING
+// RANKING FORM SUBMIT
 document.getElementById('ranking-form').addEventListener('submit', function(e) {
   e.preventDefault();
+  const idUnico = Date.now();
   const novo = {
-    id: Date.now(),
+    id: idUnico,
     titulo: document.getElementById('ranking-title').value.trim(),
     personagem: document.getElementById('ranking-character').value.trim(),
     posicao: parseInt(document.getElementById('ranking-position').value) || 99,
     nota: parseFloat(document.getElementById('ranking-rating').value) || 0,
     comentario: document.getElementById('ranking-comment').value.trim()
   };
-  rankingColecao.push(novo);
-  salvarRankingLocalStorage();
-  this.reset();
-  atualizarFiltroPersonagensRanking();
-  exibirRanking();
+
+  db.collection("ranking").doc(String(idUnico)).set(novo)
+    .then(() => this.reset())
+    .catch(err => console.error("Erro ao salvar item do ranking:", err));
 });
 
 function atualizarFiltroPersonagensRanking() {
@@ -657,6 +661,17 @@ if (document.getElementById('search-input')) {
   document.getElementById('search-input').addEventListener('input', exibirQuadrinhos);
 }
 
+// ABRIR / FECHAR SIDEBAR RETRÁTIL
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  
+  if (sidebar && overlay) {
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('active');
+  }
+}
+
 // MAPPING GLOBAL
 window.abrirDetalhesQuadrinho = abrirDetalhesQuadrinho;
 window.fecharModalDetalhes = fecharModalDetalhes;
@@ -670,20 +685,4 @@ window.exibirSubtitulos = exibirSubtitulos;
 window.exibirRanking = exibirRanking;
 window.exibirDetalhamentoFinanceiro = exibirDetalhamentoFinanceiro;
 window.atribuirNotaSubtitulo = atribuirNotaSubtitulo;
-
-// ABRIR / FECHAR SIDEBAR RETRÁTIL
-function toggleSidebar() {
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('sidebar-overlay');
-  
-  if (sidebar && overlay) {
-    sidebar.classList.toggle('open');
-    overlay.classList.toggle('active');
-  }
-}
-
-// Mapeamento global
 window.toggleSidebar = toggleSidebar;
-
-// CARREGAMENTO INICIAL -- Mudanças pra carregar via servidor
-carregarDaNuvem();
