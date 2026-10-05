@@ -143,6 +143,11 @@ function abrirDetalhesQuadrinho(id) {
       : '<span style="color: #00ff9d; font-weight: bold;"> [IN STOCK]</span>';
   }
 
+  // Tag visual das releituras 
+  let badgevezesLido = (quadrinho.vezesLido && quadrinho.vezesLido > 1)
+    ? `<span style="background: #8b5cf6; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 0.7rem; margin-left: 6px; font-weight: bold;">LIDO ${quadrinho.vezesLido}x</span>` 
+    : '';
+  
   let htmlProgresso = '';
   if (quadrinho.totalPaginas > 0) {
     const porcentagem = Math.min(100, Math.round((quadrinho.paginasLidas / quadrinho.totalPaginas) * 100));
@@ -160,6 +165,21 @@ function abrirDetalhesQuadrinho(id) {
     ? `<div style="background: #090a0d; padding: 10px; border-left: 2px solid #8b5cf6; font-size: 0.8rem; margin-top: 10px;">"${quadrinho.resenha}"</div>`
     : '';
 
+  // Histórico de Releituras
+  let htmlHistorico = '';
+  if (quadrinho.historicoLeituras && quadrinho.historicoLeituras.length > 0) {
+    let itensHist = quadrinho.historicoLeituras.map(h => 
+      `<li style="margin-bottom: 4px;">📅 <strong>${h.data}:</strong> Nota ${h.nota || 'S/N'} ${h.resenha ? `- "${h.resenha}"` : ''}</li>`
+    ).join('');
+    
+    htmlHistorico = `
+      <div style="margin-top: 12px; background: #0c0d12; padding: 8px; border: 1px solid #232238; border-radius: 4px; font-size: 0.75rem; color: #a0a2b3;">
+        <strong style="color: #a78bfa;">HISTÓRICO DE RELEITURAS:</strong>
+        <ul style="padding-left: 16px; margin: 6px 0 0 0; list-style-type: square;">${itensHist}</ul>
+      </div>
+    `;
+  }
+  
   let elementoCapa = quadrinho.capa && quadrinho.capa.trim() !== ''
     ? `<img src="${quadrinho.capa}" alt="${quadrinho.titulo}" style="max-height: 240px; width: auto; border-radius: 2px; display: block; margin: 0 auto 15px auto; border: 1px solid #232238;">`
     : `<div style="height: 140px; display: flex; align-items: center; justify-content: center; background: #090a0d; border: 1px solid #232238; font-family: monospace; font-size: 0.75rem; color: #515366; margin-bottom: 15px;">NO IMAGE DATA</div>`;
@@ -534,6 +554,23 @@ document.getElementById('edit-form').addEventListener('submit', function(e) {
   const q = colecao.find(item => Number(item.id) === id);
   if (!q) return;
 
+const novoStatus = document.getElementById('edit-read-status').value;
+  const statusAnterior = q.statusLeitura;
+  
+  let historicoAtualizado = q.historicoLeituras ? [...q.historicoLeituras] : [];
+  let totalVezesLido = q.vezesLido || 1;
+
+  // Se mudou de Releitura para Lido, arquiva a leitura anterior no histórico
+  if (statusAnterior === 'Releitura' && novoStatus === 'Já Lido') {
+    const dataHoje = new Date().toLocaleDateString('pt-BR');
+    historicoAtualizado.push({
+      data: dataHoje,
+      nota: q.nota || 0,
+      resenha: q.resenha || ''
+    });
+    totalVezesLido += 1;
+  }
+  
   const dadosAtualizados = {
     titulo: document.getElementById('edit-title').value.trim(),
     capa: document.getElementById('edit-cover').value.trim(),
