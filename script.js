@@ -504,7 +504,7 @@ document.getElementById('comic-form').addEventListener('submit', function(e) {
     historiasInclusas: document.getElementById('included-content').value.trim(),
     subtitulosDetalhes: {},
     resenha: document.getElementById('review').value.trim(),
-    historicoLeituras: []
+    historicoLeituras: [],
     vezesLido: 1 
   };
 
