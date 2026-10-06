@@ -503,7 +503,7 @@ document.getElementById('comic-form').addEventListener('submit', function(e) {
     precoPago: document.getElementById('paid-price').value ? parseFloat(document.getElementById('paid-price').value) : 0,
     historiasInclusas: document.getElementById('included-content').value.trim(),
     subtitulosDetalhes: {},
-    resenha: document.getElementById('review').value.trim()
+    resenha: document.getElementById('review').value.trim(),
     historicoLeituras: []
     vezesLido: 1 
   };
