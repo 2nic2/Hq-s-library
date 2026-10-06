@@ -504,8 +504,8 @@ document.getElementById('comic-form').addEventListener('submit', function(e) {
     historiasInclusas: document.getElementById('included-content').value.trim(),
     subtitulosDetalhes: {},
     resenha: document.getElementById('review').value.trim(),
-    historicoLeituras: [],
-    vezesLido: 1 
+    historicoLeituras: [], // 👈 VERIFICA ESTA VÍRGULA NO FINAL
+    vezesLido: 1
   };
 
   db.collection("quadrinhos").doc(String(idUnico)).set(novo)
