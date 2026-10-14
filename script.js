@@ -68,6 +68,38 @@ function normalizarTexto(texto) {
     .trim();
 }
 
+// REORDENAÇÃO DA CRONOLOGIA 
+async function reordenarCronologiaInsercao(personagem, ordemInserida, idHQAtual = null) {
+  if (!personagem || !ordemInserida) return;
+
+  const normPersonagem = normalizarTexto(personagem);
+// Filtra as HQs do mesmo personagem que têm ordem maior ou igual à inserida
+  const afetados = colecao.filter(q => {
+    if (idHQAtual && Number(q.id) === Number(idHQAtual)) return false;
+
+    const mesmoPersonagem = normalizarTexto(q.personagem) === normPersonagem;
+    const ordemExistente = parseInt(q.ordemLeitura);
+
+    return mesmoPersonagem && !isNaN(ordemExistente) && ordemExistente >= ordemInserida;
+  });
+
+  // Ordena em ordem decrescente para evitar conflitos na reordenação
+  afetados.sort((a, b) => b.ordemLeitura - a.ordemLeitura);
+
+  // Atualiza em lote (batch) no Firebase
+  const batch = db.batch();
+  
+  afetados.forEach(hq => {
+    const docId = hq.firestoreDocId || String(hq.id);
+    const docRef = db.collection("quadrinhos").doc(docId);
+    batch.update(docRef, { ordemLeitura: parseInt(hq.ordemLeitura) + 1 });
+  });
+
+  if (afetados.length > 0) {
+    await batch.commit();
+  }
+}
+
 // TROCA DE ABAS
 function trocarAba(aba) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
