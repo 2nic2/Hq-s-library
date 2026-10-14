@@ -511,15 +511,23 @@ function exibirDetalhamentoFinanceiro() {
 }
 
 // FORMULÁRIO DE CADASTRO (ENVIA DIRETO PARA O FIREBASE)
-document.getElementById('comic-form').addEventListener('submit', function(e) {
+document.getElementById('comic-form').addEventListener('submit', async function(e) {
   e.preventDefault();
+
+  const personagem = document.getElementById('character').value.trim() || 'Sem Personagem';
+  const ordemLeitura = document.getElementById('reading-order').value ? parseInt(document.getElementById('reading-order').value) : null;
+
+  // 1. Reorganiza as HQs subsequentes do mesmo personagem se uma ordem for informada
+  if (ordemLeitura !== null) {
+    await reordenarCronologiaInsercao(personagem, ordemLeitura);
+  }
 
   const idUnico = Date.now();
   const novo = {
     id: idUnico,
     titulo: document.getElementById('title').value.trim() || 'Sem Título',
     capa: document.getElementById('cover').value.trim(),
-    personagem: document.getElementById('character').value.trim() || 'Sem Personagem',
+    personagem: personagem,
     escritor: document.getElementById('writer').value.trim() || 'Sem Escritor',
     editoraPublicacao: document.getElementById('original-publisher').value.trim() || 'Sem Editora',
     editora: document.getElementById('publisher').value,
@@ -528,7 +536,7 @@ document.getElementById('comic-form').addEventListener('submit', function(e) {
     ano: document.getElementById('year').value || 'N/I',
     anoLido: document.getElementById('read-year').value || 'N/I',
     nota: document.getElementById('rating').value ? parseFloat(document.getElementById('rating').value) : 0,
-    ordemLeitura: document.getElementById('reading-order').value ? parseInt(document.getElementById('reading-order').value) : null,
+    ordemLeitura: ordemLeitura,
     totalPaginas: document.getElementById('total-pages').value ? parseInt(document.getElementById('total-pages').value) : 0,
     paginasLidas: document.getElementById('pages-read').value ? parseInt(document.getElementById('pages-read').value) : 0,
     precoCapa: document.getElementById('cover-price').value ? parseFloat(document.getElementById('cover-price').value) : 0,
@@ -536,9 +544,17 @@ document.getElementById('comic-form').addEventListener('submit', function(e) {
     historiasInclusas: document.getElementById('included-content').value.trim(),
     subtitulosDetalhes: {},
     resenha: document.getElementById('review').value.trim(),
-    historicoLeituras: [], // 👈 VERIFICA ESTA VÍRGULA NO FINAL
+    historicoLeituras: [],
     vezesLido: 1
   };
+
+  db.collection("quadrinhos").doc(String(idUnico)).set(novo)
+    .then(() => {
+      this.reset();
+      trocarAba('colecao');
+    })
+    .catch(err => console.error("Erro ao salvar HQ no Firebase:", err));
+});
 
   db.collection("quadrinhos").doc(String(idUnico)).set(novo)
     .then(() => {
