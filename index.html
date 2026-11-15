@@ -1,38 +1,98 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Comic Vault // Manager</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>COMIC VAULT // Sistema de Organização de HQs</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-  <!-- BOTÃO FLUTUANTE PARA ABRIR O MENU -->
-  <button class="menu-toggle-btn" onclick="toggleSidebar()">
+  <!-- BOTÃO FLUTUANTE DE MENU (ESQUERDA) -->
+  <button type="button" class="menu-toggle-btn" onclick="toggleSidebar()">
     <span>☰</span> MENU
   </button>
 
-  <!-- OVERLAY PARA FECHAR AO CLICAR FORA -->
+  <!-- BOTÃO FLUTUANTE DE ACESSIBILIDADE VISUAL (DIREITA COM ÍCONE DE OLHO) -->
+  <button type="button" class="a11y-toggle-btn" onclick="toggleA11yMenu()" title="Ajustes Visuais e Tamanho de Fonte">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+      <circle cx="12" cy="12" r="3"></circle>
+    </svg>
+    VISUAL
+  </button>
+
+  <!-- PAINEL DROPDOWN DE ACESSIBILIDADE -->
+  <div id="a11y-panel" class="a11y-panel">
+    <div class="a11y-header">
+      <span>AJUSTES VISUAIS</span>
+      <button type="button" class="close-a11y-btn" onclick="toggleA11yMenu()">✕</button>
+    </div>
+
+    <div class="a11y-section">
+      <label>TEMA DE COR</label>
+      <div class="a11y-btn-group">
+        <button type="button" id="btn-theme-dark" class="a11y-opt active" onclick="setTheme('dark')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+          Escuro
+        </button>
+        <button type="button" id="btn-theme-light" class="a11y-opt" onclick="setTheme('light')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          Claro
+        </button>
+      </div>
+    </div>
+
+    <div class="a11y-section">
+      <label>TAMANHO DAS LETRAS (<span id="font-scale-label">100%</span>)</label>
+      <div class="a11y-btn-group">
+        <button type="button" class="a11y-opt" onclick="changeFontSize(-1)" title="Diminuir letras">A-</button>
+        <button type="button" class="a11y-opt" onclick="changeFontSize(0)" title="Tamanho padrão">Padrão</button>
+        <button type="button" class="a11y-opt" onclick="changeFontSize(1)" title="Aumentar letras">A+</button>
+      </div>
+    </div>
+
+    <div class="a11y-section">
+      <button type="button" id="btn-high-contrast" class="a11y-opt full-opt" onclick="toggleHighContrast()">
+        ◐ Alto Contraste
+      </button>
+    </div>
+  </div>
+
+  <!-- OVERLAY PARA FECHAR O MENU LATERAL -->
   <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
   <div class="app-container">
-    <!-- SIDEBAR RETRÁTIL (INVISÍVEL POR PADRÃO) -->
+    <!-- SIDEBAR RETRÁTIL -->
     <aside id="sidebar" class="sidebar">
-      <div class="sidebar-header">
-        <div class="logo-badge">SYSTEM // V2.6</div>
-        <h1>COMIC VAULT</h1>
-        <button class="close-sidebar-btn" onclick="toggleSidebar()">✕</button>
-      </div>
+      <div>
+        <div class="sidebar-header">
+          <div class="logo-badge">SYSTEM // V2.6</div>
+          <h1>COMIC VAULT</h1>
+          <button type="button" class="close-sidebar-btn" onclick="toggleSidebar()">✕</button>
+        </div>
 
-      <nav class="tab-nav">
-        <button id="btn-tab-cadastrar" class="tab-btn active" onclick="trocarAba('cadastrar'); toggleSidebar()">CADASTRAR</button>
-        <button id="btn-tab-colecao" class="tab-btn" onclick="trocarAba('colecao'); toggleSidebar()">COLEÇÃO</button>
-        <button id="btn-tab-cronologia" class="tab-btn" onclick="trocarAba('cronologia'); toggleSidebar()">CRONOLOGIA</button>
-        <button id="btn-tab-subtitulos" class="tab-btn" onclick="trocarAba('subtitulos'); toggleSidebar()">CONTEÚDO</button>
-        <button id="btn-tab-ranking" class="tab-btn" onclick="trocarAba('ranking'); toggleSidebar()">RANKING</button>
-        <button id="btn-tab-financeiro" class="tab-btn" onclick="trocarAba('financeiro'); toggleSidebar()">FINANCEIRO</button>
-      </nav>
+        <nav class="tab-nav">
+          <button type="button" id="btn-tab-cadastrar" class="tab-btn active" onclick="trocarAba('cadastrar'); toggleSidebar()">CADASTRAR</button>
+          <button type="button" id="btn-tab-colecao" class="tab-btn" onclick="trocarAba('colecao'); toggleSidebar()">COLEÇÃO</button>
+          <button type="button" id="btn-tab-cronologia" class="tab-btn" onclick="trocarAba('cronologia'); toggleSidebar()">CRONOLOGIA</button>
+          <button type="button" id="btn-tab-subtitulos" class="tab-btn" onclick="trocarAba('subtitulos'); toggleSidebar()">CONTEÚDO</button>
+          <button type="button" id="btn-tab-ranking" class="tab-btn" onclick="trocarAba('ranking'); toggleSidebar()">RANKING</button>
+          <button type="button" id="btn-tab-financeiro" class="tab-btn" onclick="trocarAba('financeiro'); toggleSidebar()">FINANCEIRO</button>
+        </nav>
+      </div>
 
       <div class="sidebar-footer">
         VAULT OS // 2026
@@ -41,17 +101,27 @@
 
     <!-- ÁREA PRINCIPAL -->
     <main class="main-content">
-      <!-- Mantenha todas as divs das abas e modais exatamente como estão -->
 
       <!-- ABA 1: CADASTRAR HQ -->
       <div id="tab-cadastrar" class="tab-content active">
         <section class="tech-panel">
           <div class="panel-header">REGISTRO DE NOVA HQ</div>
+
+          <!-- LEITOR DE CÓDIGO DE BARRAS -->
+          <div class="barcode-box">
+            <button type="button" id="btn-scan-barcode" class="btn-tech barcode-btn" onclick="iniciarLeitorCodigoBarras()">
+              📷 LER CÓDIGO DE BARRAS (ISBN)
+            </button>
+            <button type="button" id="btn-stop-barcode" class="btn-tech action-btn-delete" style="display: none; width: 100%; margin-top: 8px;" onclick="pararLeitorCodigoBarras()">
+              ✕ FECHAR CÂMERA
+            </button>
+            <div id="barcode-reader" style="width: 100%; max-width: 350px; margin: 12px auto 0 auto; display: none; border-radius: 4px; overflow: hidden;"></div>
+          </div>
+
           <form id="comic-form">
-            <input type="text" id="title" placeholder="Título do Quadrinho">
+            <input type="text" id="title" placeholder="Título do Quadrinho" required>
             <input type="text" id="cover" placeholder="URL da Imagem da Capa">
             <input type="text" id="character" placeholder="Personagem Principal">
-            
             <input type="text" id="writer" placeholder="Escritor(es)">
             <input type="text" id="original-publisher" placeholder="Editora de Publicação (ex: Panini)">
 
@@ -89,34 +159,32 @@
             </div>
 
             <div class="form-group">
-              <input type="number" id="cover-price" placeholder="Preço Capa (R$)" step="0.01" min="0">
-              <input type="number" id="paid-price" placeholder="Preço Pago (R$)" step="0.01" min="0">
+              <input type="number" id="cover-price" placeholder="Preço Capa (R$)" min="0" step="0.01">
+              <input type="number" id="paid-price" placeholder="Preço Pago (R$)" min="0" step="0.01">
             </div>
 
             <textarea id="included-content" placeholder="Histórias / Subtítulos Inclusos (separados por vírgula)" rows="2"></textarea>
-            <textarea id="review" placeholder="Notas do Editor / Resenha..." rows="3"></textarea>
+            <textarea id="review" placeholder="Notas do Editor / Resenha..." rows="2"></textarea>
 
             <button type="submit" class="btn-tech-primary">REGISTRAR HQ</button>
           </form>
         </section>
       </div>
 
-      <!-- ABA 2: MINHA COLEÇÃO -->
+      <!-- ABA 2: COLEÇÃO E ESTATÍSTICAS -->
       <div id="tab-colecao" class="tab-content">
-        <section class="stats-grid">
-          <div class="stat-box"><span id="stat-total">0</span><small>TOTAL HQS</small></div>
+        <div class="stats-grid">
+          <div class="stat-box"><span id="stat-total">0</span><small>TOTAL</small></div>
           <div class="stat-box"><span id="stat-reading">0</span><small>LENDO</small></div>
           <div class="stat-box"><span id="stat-read">0</span><small>LIDOS</small></div>
-          <div class="stat-box"><span id="stat-want">0</span><small>WISHLIST</small></div>
-          <div class="stat-box"><span id="stat-pages-total">0</span><small>PÁGS LIDAS</small></div>
-          <div class="stat-box"><span id="stat-percent-global">0%</span><small>PROGRESSO</small></div>
-        </section>
+          <div class="stat-box"><span id="stat-want">0</span><small>QUERO LER</small></div>
+          <div class="stat-box"><span id="stat-pages-total">0</span><small>PÁGINAS LIDAS</small></div>
+          <div class="stat-box"><span id="stat-percent-global">0%</span><small>CONCLUÍDO</small></div>
+        </div>
 
-        <section class="tech-panel search-panel">
-          <input type="text" id="search-input" placeholder="BUSCAR POR TÍTULO, AUTOR OU CONTEÚDO...">
-        </section>
-
-        <section class="vault-container">
+        <section class="tech-panel">
+          <div class="panel-header">ESTANTE DIGITAL</div>
+          <input type="text" id="search-input" placeholder="Buscar por título, personagem, escritor, editora ou história inclusa..." style="margin-bottom: 18px;">
           <div id="comic-list" class="comic-grid"></div>
         </section>
       </div>
@@ -126,14 +194,12 @@
         <section class="tech-panel">
           <div class="panel-header">ORDEM CRONOLÓGICA DE LEITURA</div>
           <select id="character-filter" onchange="exibirCronologia()">
-            <option value="">Selecione o Personagem...</option>
+            <option value="">Selecione um Personagem...</option>
           </select>
         </section>
 
-        <section class="vault-container">
-          <div id="cronologia-list" class="chrono-cover-grid">
-            <div class="empty-state" style="grid-column: 1/-1;">Aguardando seleção de personagem...</div>
-          </div>
+        <section class="tech-panel">
+          <div id="cronologia-list" class="chrono-cover-grid"></div>
         </section>
       </div>
 
@@ -158,14 +224,12 @@
         <section class="tech-panel">
           <div class="panel-header">ADICIONAR AO RANKING</div>
           <form id="ranking-form">
-            <input type="text" id="ranking-title" placeholder="Título da História / Arco">
-            
+            <input type="text" id="ranking-title" placeholder="Título da História / Arco" required>
             <div class="form-group">
               <input type="text" id="ranking-character" placeholder="Personagem">
               <input type="number" id="ranking-position" placeholder="Posição (#1)" min="1">
               <input type="number" id="ranking-rating" placeholder="Score (0.5 a 5)" min="0.5" max="5" step="0.5">
             </div>
-
             <textarea id="ranking-comment" placeholder="Análise crítica..." rows="2"></textarea>
             <button type="submit" class="btn-tech-primary">SALVAR RANKING</button>
           </form>
@@ -222,24 +286,23 @@
     </main>
   </div>
 
-  <!-- MODAL TECH DETALHES -->
+  <!-- MODAL DE DETALHES DA HQ -->
   <div id="detail-modal" class="tech-modal">
     <div class="modal-card">
-      <button class="close-btn" onclick="fecharModalDetalhes()">ESC [✕]</button>
+      <button type="button" class="close-btn" onclick="fecharModalDetalhes()">ESC [✕]</button>
       <div id="detail-modal-body"></div>
     </div>
   </div>
 
-  <!-- MODAL TECH EDIÇÃO -->
+  <!-- MODAL DE EDIÇÃO DA HQ -->
   <div id="edit-modal" class="tech-modal">
     <div class="modal-card">
       <div class="panel-header">EDITAR REGISTRO</div>
       <form id="edit-form">
         <input type="hidden" id="edit-id">
-        <input type="text" id="edit-title" placeholder="Título">
+        <input type="text" id="edit-title" placeholder="Título" required>
         <input type="text" id="edit-cover" placeholder="URL Capa">
         <input type="text" id="edit-character" placeholder="Personagem">
-        
         <input type="text" id="edit-writer" placeholder="Escritor(es)">
         <input type="text" id="edit-original-publisher" placeholder="Editora Publicação">
 
@@ -281,7 +344,7 @@
           <input type="number" id="edit-paid-price" placeholder="Preço Pago" step="0.01">
         </div>
 
-        <textarea id="edit-included-content" placeholder="Conteúdo Inclusos" rows="2"></textarea>
+        <textarea id="edit-included-content" placeholder="Conteúdo Incluso" rows="2"></textarea>
         <textarea id="edit-review" placeholder="Resenha..." rows="3"></textarea>
 
         <div style="display: flex; gap: 10px; margin-top: 15px;">
@@ -291,14 +354,11 @@
       </form>
     </div>
   </div>
-<!-- SDKs DO FIREBASE COMPAT (Adicione estas 2 linhas antes do script.js) -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <!-- BIBLIOTECA LEITORA DE CÓDIGO DE BARRAS -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
   <!-- SEU SCRIPT DA APLICAÇÃO -->
-  <script src="script.js"></script>
-</body>
-</html>
   <script src="script.js"></script>
 </body>
 </html>
