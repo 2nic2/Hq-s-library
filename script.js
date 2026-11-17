@@ -1,18 +1,75 @@
 // Querida Nick, esse é o ínicio das minhas alterações, basicamente eu criei o banco de dados no firebase pra vc, estou usando um meu pra testar, mas depois a gente cria o seu junto ok?
-//Notei que o gemini não tinha errado, ele só tinha programado o save no cache do navegador, aí eu adicionei mais uns métodos pra enviar diretamente para um banco de dados na nuvem que eu tenho
-//Basicamente sempre que a senhora salvar um novo quadrinho, ele vai fazer o upload no banco de dados e aí deve funcionar em qualquer plataforma
+// Notei que o gemini não tinha errado, ele só tinha programado o save no cache do navegador, aí eu adicionei mais uns métodos pra enviar diretamente para um banco de dados na nuvem que eu tenho
+// Basicamente sempre que a senhora salvar um novo quadrinho, ele vai fazer o upload no banco de dados e aí deve funcionar em qualquer plataforma
+
+// ==========================================================================
 // CONFIGURAÇÃO DO SEU PROJETO FIREBASE (hq-s-library-b1b4a)
+// ==========================================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyBv2HVoKH8zGMZRm8AB_xyx2mNfIPC_dao",
+  authDomain: "hq-s-library-b1b4a.firebaseapp.com",
+  projectId: "hq-s-library-b1b4a",
+  storageBucket: "hq-s-library-b1b4a.firebasestorage.app",
+  messagingSenderId: "934974664094",
+  appId: "1:934974664094:web:cfa6937c4bf6e80f293a8f"
+};
+
+// Inicializa o Firebase e a base de dados Firestore
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// Habilita persistência offline automática no celular e PC
+db.enablePersistence().catch(err => {
+  console.log("Aviso de persistência offline:", err.code);
+});
+
 // ==========================================================================
 // 1. ESTADO GLOBAL E ARMAZENAMENTO
 // ==========================================================================
+// Carrega do cache local primeiro para carregar rápido
 let colecao = JSON.parse(localStorage.getItem('comic_vault_colecao')) || [];
 let rankings = JSON.parse(localStorage.getItem('comic_vault_rankings')) || [];
 let html5QrCode = null;
 let currentFontScale = parseInt(localStorage.getItem('hq-font-scale')) || 100;
 
+// Sincroniza a COLEÇÃO com a nuvem em tempo real
+db.collection('banco_dados').doc('colecao').onSnapshot((doc) => {
+  if (doc.exists) {
+    colecao = doc.data().itens || [];
+    localStorage.setItem('comic_vault_colecao', JSON.stringify(colecao));
+    atualizarTodosOsFiltros();
+    // Atualiza a tela se estiver na aba da coleção
+    if (document.getElementById('tab-colecao').classList.contains('active')) {
+      exibirQuadrinhos();
+    }
+  }
+});
+
+// Sincroniza os RANKINGS com a nuvem em tempo real
+db.collection('banco_dados').doc('rankings').onSnapshot((doc) => {
+  if (doc.exists) {
+    rankings = doc.data().itens || [];
+    localStorage.setItem('comic_vault_rankings', JSON.stringify(rankings));
+    atualizarFiltroPersonagensRanking();
+    // Atualiza a tela se estiver na aba de ranking
+    if (document.getElementById('tab-ranking').classList.contains('active')) {
+      exibirRanking();
+    }
+  }
+});
+
+// Função atualizada para salvar no Firebase e no cache local ao mesmo tempo
 function salvarDadosLocais() {
+  // Salva no cache local
   localStorage.setItem('comic_vault_colecao', JSON.stringify(colecao));
   localStorage.setItem('comic_vault_rankings', JSON.stringify(rankings));
+  
+  // Envia para o banco de dados na nuvem (Firebase)
+  db.collection('banco_dados').doc('colecao').set({ itens: colecao })
+    .catch(err => console.error("Erro ao salvar coleção na nuvem:", err));
+    
+  db.collection('banco_dados').doc('rankings').set({ itens: rankings })
+    .catch(err => console.error("Erro ao salvar rankings na nuvem:", err));
 }
 
 function normalizarTexto(texto) {
