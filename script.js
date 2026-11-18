@@ -1,9 +1,5 @@
-// Querida Nick, esse é o ínicio das minhas alterações, basicamente eu criei o banco de dados no firebase pra vc, estou usando um meu pra testar, mas depois a gente cria o seu junto ok?
-// Notei que o gemini não tinha errado, ele só tinha programado o save no cache do navegador, aí eu adicionei mais uns métodos pra enviar diretamente para um banco de dados na nuvem que eu tenho
-// Basicamente sempre que a senhora salvar um novo quadrinho, ele vai fazer o upload no banco de dados e aí deve funcionar em qualquer plataforma
-
 // ==========================================================================
-// CONFIGURAÇÃO DO SEU PROJETO FIREBASE (hq-s-library-b1b4a)
+// CONFIGURAÇÃO DO FIREBASE (NUVEM MULTIPLATAFORMA)
 // ==========================================================================
 const firebaseConfig = {
   apiKey: "AIzaSyBv2HVoKH8zGMZRm8AB_xyx2mNfIPC_dao",
@@ -14,11 +10,9 @@ const firebaseConfig = {
   appId: "1:934974664094:web:cfa6937c4bf6e80f293a8f"
 };
 
-// Inicializa o Firebase e a base de dados Firestore
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// Habilita persistência offline automática no celular e PC
 db.enablePersistence().catch(err => {
   console.log("Aviso de persistência offline:", err.code);
 });
@@ -26,51 +20,37 @@ db.enablePersistence().catch(err => {
 // ==========================================================================
 // 1. ESTADO GLOBAL E ARMAZENAMENTO
 // ==========================================================================
-// Carrega do cache local primeiro para carregar rápido
-let colecao = JSON.parse(localStorage.getItem('comic_vault_colecao')) || [];
-let rankings = JSON.parse(localStorage.getItem('comic_vault_rankings')) || [];
+let colecao = [];
+let rankings = [];
 let html5QrCode = null;
 let currentFontScale = parseInt(localStorage.getItem('hq-font-scale')) || 100;
 
-// Sincroniza a COLEÇÃO com a nuvem em tempo real
-db.collection('banco_dados').doc('colecao').onSnapshot((doc) => {
-  if (doc.exists) {
-    colecao = doc.data().itens || [];
-    localStorage.setItem('comic_vault_colecao', JSON.stringify(colecao));
-    atualizarTodosOsFiltros();
-    // Atualiza a tela se estiver na aba da coleção
-    if (document.getElementById('tab-colecao').classList.contains('active')) {
-      exibirQuadrinhos();
-    }
-  }
-});
-
-// Sincroniza os RANKINGS com a nuvem em tempo real
-db.collection('banco_dados').doc('rankings').onSnapshot((doc) => {
-  if (doc.exists) {
-    rankings = doc.data().itens || [];
-    localStorage.setItem('comic_vault_rankings', JSON.stringify(rankings));
-    atualizarFiltroPersonagensRanking();
-    // Atualiza a tela se estiver na aba de ranking
-    if (document.getElementById('tab-ranking').classList.contains('active')) {
-      exibirRanking();
-    }
-  }
-});
-
-// Função atualizada para salvar no Firebase e no cache local ao mesmo tempo
-function salvarDadosLocais() {
-  // Salva no cache local
-  localStorage.setItem('comic_vault_colecao', JSON.stringify(colecao));
-  localStorage.setItem('comic_vault_rankings', JSON.stringify(rankings));
+// ESCUTA A COLEÇÃO DE HQS EM TEMPO REAL NO FIREBASE
+db.collection("quadrinhos").onSnapshot(snapshot => {
+  colecao = snapshot.docs.map(doc => ({
+    firestoreDocId: doc.id,
+    ...doc.data()
+  }));
+  atualizarTodosOsFiltros();
+  exibirQuadrinhos();
   
-  // Envia para o banco de dados na nuvem (Firebase)
-  db.collection('banco_dados').doc('colecao').set({ itens: colecao })
-    .catch(err => console.error("Erro ao salvar coleção na nuvem:", err));
-    
-  db.collection('banco_dados').doc('rankings').set({ itens: rankings })
-    .catch(err => console.error("Erro ao salvar rankings na nuvem:", err));
-}
+  const abaAtiva = document.querySelector('.tab-content.active');
+  if (abaAtiva) {
+    if (abaAtiva.id === 'tab-cronologia') exibirCronologia();
+    else if (abaAtiva.id === 'tab-subtitulos') exibirSubtitulos();
+    else if (abaAtiva.id === 'tab-financeiro') exibirDetalhamentoFinanceiro();
+  }
+}, err => console.error("Erro ao sincronizar HQs:", err));
+
+// ESCUTA A COLEÇÃO DE RANKING EM TEMPO REAL NO FIREBASE
+db.collection("ranking").onSnapshot(snapshot => {
+  rankings = snapshot.docs.map(doc => ({
+    firestoreDocId: doc.id,
+    ...doc.data()
+  }));
+  atualizarFiltroPersonagensRanking();
+  exibirRanking();
+}, err => console.error("Erro ao sincronizar Ranking:", err));
 
 function normalizarTexto(texto) {
   if (!texto) return '';
@@ -84,7 +64,7 @@ function normalizarTexto(texto) {
 }
 
 // ==========================================================================
-// 2. MENU LATERAL E ACESSIBILIDADE VISUAL (TEMA, TAMANHO DAS LETRAS, CONTRASTE)
+// 2. MENU LATERAL E ACESSIBILIDADE VISUAL
 // ==========================================================================
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
@@ -114,16 +94,13 @@ function setTheme(theme) {
     if (btnDark) btnDark.classList.add('active');
     if (btnLight) btnLight.classList.remove('active');
   }
-
   localStorage.setItem('hq-theme', theme);
 }
 
 function changeFontSize(step) {
-  if (step === 0) {
-    currentFontScale = 100;
-  } else {
-    currentFontScale = Math.min(135, Math.max(80, currentFontScale + step * 5));
-  }
+  if (step === 0) currentFontScale = 100;
+  else currentFontScale = Math.min(135, Math.max(80, currentFontScale + step * 5));
+  
   document.documentElement.style.fontSize = (16 * (currentFontScale / 100)) + 'px';
   const label = document.getElementById('font-scale-label');
   if (label) label.textContent = currentFontScale + '%';
@@ -138,14 +115,6 @@ function toggleHighContrast() {
   if (btn) btn.classList.toggle('active', isHC);
   localStorage.setItem('hq-high-contrast', isHC ? '1' : '0');
 }
-
-document.addEventListener('click', (e) => {
-  const panel = document.getElementById('a11y-panel');
-  const btn = document.querySelector('.a11y-toggle-btn');
-  if (panel && panel.classList.contains('open') && !panel.contains(e.target) && !btn.contains(e.target)) {
-    panel.classList.remove('open');
-  }
-});
 
 // ==========================================================================
 // 3. NAVEGAÇÃO ENTRE ABAS
@@ -240,23 +209,32 @@ async function buscarDadosPorISBN(isbn) {
 }
 
 // ==========================================================================
-// 5. CADASTRO, REORDENAÇÃO E EDIÇÃO DE QUADRINHOS
+// 5. REORDENAÇÃO, CADASTRO, EDIÇÃO (FIREBASE)
 // ==========================================================================
-function reordenarCronologiaLocal(personagem, ordemInserida, idHQAtual = null) {
+async function reordenarCronologiaInsercao(personagem, ordemInserida, idHQAtual = null) {
   if (!personagem || !ordemInserida) return;
-  const normPersonagem = normalizarTexto(personagem);
 
-  colecao.forEach(hq => {
-    if (idHQAtual && Number(hq.id) === Number(idHQAtual)) return;
-    const mesmoPersonagem = normalizarTexto(hq.personagem) === normPersonagem;
-    const ordemExistente = parseInt(hq.ordemLeitura);
-    if (mesmoPersonagem && !isNaN(ordemExistente) && ordemExistente >= ordemInserida) {
-      hq.ordemLeitura = ordemExistente + 1;
-    }
+  const normPersonagem = normalizarTexto(personagem);
+  const afetados = colecao.filter(q => {
+    if (idHQAtual && Number(q.id) === Number(idHQAtual)) return false;
+    const mesmoPersonagem = normalizarTexto(q.personagem) === normPersonagem;
+    const ordemExistente = parseInt(q.ordemLeitura);
+    return mesmoPersonagem && !isNaN(ordemExistente) && ordemExistente >= ordemInserida;
   });
+
+  afetados.sort((a, b) => b.ordemLeitura - a.ordemLeitura);
+  const batch = db.batch();
+  
+  afetados.forEach(hq => {
+    const docId = hq.firestoreDocId || String(hq.id);
+    const docRef = db.collection("quadrinhos").doc(docId);
+    batch.update(docRef, { ordemLeitura: parseInt(hq.ordemLeitura) + 1 });
+  });
+
+  if (afetados.length > 0) await batch.commit();
 }
 
-document.getElementById('comic-form').addEventListener('submit', function (e) {
+document.getElementById('comic-form').addEventListener('submit', async function (e) {
   e.preventDefault();
 
   const titulo = document.getElementById('title').value.trim();
@@ -272,12 +250,11 @@ document.getElementById('comic-form').addEventListener('submit', function (e) {
     paginasLidas = totalPaginas;
   }
 
-  if (ordemLeitura) {
-    reordenarCronologiaLocal(personagem, ordemLeitura);
-  }
+  if (ordemLeitura) await reordenarCronologiaInsercao(personagem, ordemLeitura);
 
+  const idUnico = Date.now();
   const novaHQ = {
-    id: Date.now(),
+    id: idUnico,
     titulo,
     capa: document.getElementById('cover').value.trim(),
     personagem,
@@ -300,11 +277,12 @@ document.getElementById('comic-form').addEventListener('submit', function (e) {
     vezesLido: statusLeitura === 'Já Lido' ? 1 : 0
   };
 
-  colecao.push(novaHQ);
-  salvarDadosLocais();
-  this.reset();
-  atualizarTodosOsFiltros();
-  alert('HQ registrada com sucesso!');
+  db.collection("quadrinhos").doc(String(idUnico)).set(novaHQ)
+    .then(() => {
+      this.reset();
+      trocarAba('colecao');
+    })
+    .catch(err => console.error("Erro ao salvar HQ no Firebase:", err));
 });
 
 // ==========================================================================
@@ -336,9 +314,10 @@ function atualizarEstatisticas() {
 function exibirQuadrinhos() {
   atualizarEstatisticas();
   const grid = document.getElementById('comic-list');
-  const termo = normalizarTexto(document.getElementById('search-input')?.value || '');
+  const searchInput = document.getElementById('search-input');
+  const termo = searchInput ? normalizarTexto(searchInput.value) : '';
+  
   if (!grid) return;
-
   grid.innerHTML = '';
 
   const filtrados = colecao.filter(c => {
@@ -363,10 +342,12 @@ function exibirQuadrinhos() {
   });
 }
 
-document.getElementById('search-input')?.addEventListener('input', exibirQuadrinhos);
+if(document.getElementById('search-input')) {
+  document.getElementById('search-input').addEventListener('input', exibirQuadrinhos);
+}
 
 // ==========================================================================
-// 7. MODAL DE DETALHES, PROGRESSO E EDIÇÃO (COM MODO RELEITURA)
+// 7. MODAL DE DETALHES, PROGRESSO E EDIÇÃO (FIREBASE)
 // ==========================================================================
 function abrirDetalhesQuadrinho(id) {
   const q = colecao.find(item => Number(item.id) === Number(id));
@@ -445,26 +426,27 @@ function atualizarPaginasLidas(id) {
   const num = parseInt(novaPagina);
   if (isNaN(num) || num < 0) return;
 
-  q.paginasLidas = num;
+  let atualizacao = { paginasLidas: num };
+
   if (q.totalPaginas > 0 && num >= q.totalPaginas) {
-    q.paginasLidas = q.totalPaginas;
+    atualizacao.paginasLidas = q.totalPaginas;
+    atualizacao.statusLeitura = 'Já Lido';
     if (q.statusLeitura === 'Releitura') {
-      q.vezesLido = (q.vezesLido || 1) + 1;
+      atualizacao.vezesLido = (q.vezesLido || 1) + 1;
     } else {
-      q.vezesLido = Math.max(1, q.vezesLido || 1);
+      atualizacao.vezesLido = Math.max(1, q.vezesLido || 1);
     }
-    q.statusLeitura = 'Já Lido';
   }
 
-  salvarDadosLocais();
-  abrirDetalhesQuadrinho(id);
-  exibirQuadrinhos();
+  const docId = q.firestoreDocId || String(q.id);
+  db.collection("quadrinhos").doc(docId).update(atualizacao)
+    .then(() => fecharModalDetalhes())
+    .catch(err => console.error("Erro ao atualizar páginas lidas:", err));
 }
 
 function abrirModalEdicao(id) {
   const q = colecao.find(item => Number(item.id) === Number(id));
   if (!q) return;
-
   fecharModalDetalhes();
 
   document.getElementById('edit-id').value = q.id;
@@ -494,7 +476,7 @@ function fecharModalEdicao() {
   document.getElementById('edit-modal')?.classList.remove('active');
 }
 
-document.getElementById('edit-form').addEventListener('submit', function (e) {
+document.getElementById('edit-form').addEventListener('submit', async function (e) {
   e.preventDefault();
   const id = Number(document.getElementById('edit-id').value);
   const q = colecao.find(item => Number(item.id) === id);
@@ -506,7 +488,7 @@ document.getElementById('edit-form').addEventListener('submit', function (e) {
   const novoPersonagem = document.getElementById('edit-character').value.trim() || 'Sem Personagem';
 
   if (novaOrdem && novaOrdem !== q.ordemLeitura) {
-    reordenarCronologiaLocal(novoPersonagem, novaOrdem, id);
+    await reordenarCronologiaInsercao(novoPersonagem, novaOrdem, id);
   }
 
   let historicoAtualizado = q.historicoLeituras ? [...q.historicoLeituras] : [];
@@ -523,44 +505,47 @@ document.getElementById('edit-form').addEventListener('submit', function (e) {
     totalVezesLido += 1;
   }
 
-  q.titulo = document.getElementById('edit-title').value.trim();
-  q.capa = document.getElementById('edit-cover').value.trim();
-  q.personagem = novoPersonagem;
-  q.escritor = document.getElementById('edit-writer').value.trim() || 'N/I';
-  q.editoraPublicacao = document.getElementById('edit-original-publisher').value.trim() || 'N/I';
-  q.editora = document.getElementById('edit-publisher').value;
-  q.posse = document.getElementById('edit-ownership').value;
-  q.statusLeitura = novoStatus;
-  q.ano = document.getElementById('edit-year').value || 'N/I';
-  q.anoLido = document.getElementById('edit-read-year').value || 'N/I';
-  q.nota = parseFloat(document.getElementById('edit-rating').value) || 0;
-  q.ordemLeitura = novaOrdem;
-  q.totalPaginas = parseInt(document.getElementById('edit-total-pages').value) || 0;
-  q.paginasLidas = parseInt(document.getElementById('edit-pages-read').value) || 0;
-  q.precoCapa = parseFloat(document.getElementById('edit-cover-price').value) || 0;
-  q.precoPago = parseFloat(document.getElementById('edit-paid-price').value) || 0;
-  q.historiasInclusas = document.getElementById('edit-included-content').value.trim();
-  q.resenha = document.getElementById('edit-review').value.trim();
-  q.historicoLeituras = historicoAtualizado;
-  q.vezesLido = totalVezesLido;
+  const dadosAtualizados = {
+    titulo: document.getElementById('edit-title').value.trim(),
+    capa: document.getElementById('edit-cover').value.trim(),
+    personagem: novoPersonagem,
+    escritor: document.getElementById('edit-writer').value.trim() || 'N/I',
+    editoraPublicacao: document.getElementById('edit-original-publisher').value.trim() || 'N/I',
+    editora: document.getElementById('edit-publisher').value,
+    posse: document.getElementById('edit-ownership').value,
+    statusLeitura: novoStatus,
+    ano: document.getElementById('edit-year').value || 'N/I',
+    anoLido: document.getElementById('edit-read-year').value || 'N/I',
+    nota: parseFloat(document.getElementById('edit-rating').value) || 0,
+    ordemLeitura: novaOrdem,
+    totalPaginas: parseInt(document.getElementById('edit-total-pages').value) || 0,
+    paginasLidas: parseInt(document.getElementById('edit-pages-read').value) || 0,
+    precoCapa: parseFloat(document.getElementById('edit-cover-price').value) || 0,
+    precoPago: parseFloat(document.getElementById('edit-paid-price').value) || 0,
+    historiasInclusas: document.getElementById('edit-included-content').value.trim(),
+    resenha: document.getElementById('edit-review').value.trim(),
+    historicoLeituras: historicoAtualizado,
+    vezesLido: totalVezesLido
+  };
 
-  if (novoStatus === 'Já Lido' && q.totalPaginas > 0) {
-    q.paginasLidas = q.totalPaginas;
+  if (novoStatus === 'Já Lido' && dadosAtualizados.totalPaginas > 0) {
+    dadosAtualizados.paginasLidas = dadosAtualizados.totalPaginas;
   }
 
-  salvarDadosLocais();
-  fecharModalEdicao();
-  atualizarTodosOsFiltros();
-  exibirQuadrinhos();
+  const docId = q.firestoreDocId || String(q.id);
+  db.collection("quadrinhos").doc(docId).update(dadosAtualizados)
+    .then(() => fecharModalEdicao())
+    .catch(err => console.error("Erro ao atualizar no Firebase:", err));
 });
 
 function apagarQuadrinho(id) {
-  if (!confirm('Tem certeza que deseja excluir esta HQ?')) return;
-  colecao = colecao.filter(item => Number(item.id) !== Number(id));
-  salvarDadosLocais();
-  fecharModalDetalhes();
-  atualizarTodosOsFiltros();
-  exibirQuadrinhos();
+  if (confirm('Tem certeza que deseja excluir esta HQ?')) {
+    const q = colecao.find(item => Number(item.id) === Number(id));
+    if (!q) return;
+    const docId = q.firestoreDocId || String(q.id);
+    db.collection("quadrinhos").doc(docId).delete()
+      .catch(err => console.error("Erro ao excluir do Firebase:", err));
+  }
 }
 
 // ==========================================================================
@@ -596,7 +581,6 @@ function atualizarFiltroPersonagens(idSelect) {
     opt.textContent = p;
     select.appendChild(opt);
   });
-
   select.value = valorAtual;
 }
 
@@ -695,19 +679,19 @@ document.getElementById('ranking-form').addEventListener('submit', function (e) 
   const titulo = document.getElementById('ranking-title').value.trim();
   if (!titulo) return;
 
-  rankings.push({
-    id: Date.now(),
+  const idUnico = Date.now();
+  const novoRanking = {
+    id: idUnico,
     titulo,
     personagem: document.getElementById('ranking-character').value.trim() || 'Geral',
     posicao: parseInt(document.getElementById('ranking-position').value) || 99,
     nota: parseFloat(document.getElementById('ranking-rating').value) || 0,
     comentario: document.getElementById('ranking-comment').value.trim()
-  });
+  };
 
-  salvarDadosLocais();
-  this.reset();
-  atualizarFiltroPersonagensRanking();
-  exibirRanking();
+  db.collection("ranking").doc(String(idUnico)).set(novoRanking)
+    .then(() => this.reset())
+    .catch(err => console.error("Erro ao salvar no ranking:", err));
 });
 
 function atualizarFiltroPersonagensRanking() {
@@ -760,10 +744,11 @@ function exibirRanking() {
 }
 
 function apagarRanking(id) {
-  rankings = rankings.filter(r => r.id !== id);
-  salvarDadosLocais();
-  atualizarFiltroPersonagensRanking();
-  exibirRanking();
+  const r = rankings.find(item => Number(item.id) === Number(id));
+  if (!r) return;
+  const docId = r.firestoreDocId || String(r.id);
+  db.collection("ranking").doc(docId).delete()
+    .catch(err => console.error("Erro ao apagar do ranking:", err));
 }
 
 function atualizarFiltroFinanceiro() {
@@ -829,9 +814,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('btn-high-contrast');
     if (btn) btn.classList.add('active');
   }
-
-  atualizarTodosOsFiltros();
-  exibirQuadrinhos();
 });
 
 window.toggleSidebar = toggleSidebar;
